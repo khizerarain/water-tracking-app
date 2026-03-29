@@ -1,0 +1,83 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  clerkId       String    @unique
+  email         String    @unique
+  name          String?
+  activityLevel String    @default("intermediate") // beginner, intermediate, advanced, athletic
+  goalWaterMl   Int       @default(2500)
+  goalSteps     Int       @default(8000)
+  dailyLogs     DailyLog[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model DailyLog {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime      @db.Date
+  waterMl         Int           @default(0)
+  steps           Int           @default(0)
+  waterEntries    WaterEntry[]
+  foodEntries     FoodEntry[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model WaterEntry {
+  id          String    @id @default(cuid())
+  dailyLogId  String
+  dailyLog    DailyLog  @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  amountMl    Int
+  timestamp   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@index([dailyLogId])
+}
+
+model FoodEntry {
+  id            String    @id @default(cuid())
+  dailyLogId    String
+  dailyLog      DailyLog  @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  foodDatabaseId String
+  foodDatabase  FoodDatabase @relation(fields: [foodDatabaseId], references: [id])
+  quantity      Float     // in grams
+  waterMl       Int       // calculated
+  calories      Int       // calculated
+  protein       Float     // calculated
+  carbs         Float     // calculated
+  fat           Float     // calculated
+  timestamp     DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+
+  @@index([dailyLogId])
+  @@index([foodDatabaseId])
+}
+
+model FoodDatabase {
+  id              String      @id @default(cuid())
+  name            String      @unique
+  waterPer100g    Int         // ml water per 100g
+  caloriesPer100g Int
+  proteinPer100g  Float
+  carbsPer100g    Float
+  fatPer100g      Float
+  category        String      // Fruit, Vegetable, Protein, Dairy, Grain, etc.
+  foodEntries     FoodEntry[]
+}
